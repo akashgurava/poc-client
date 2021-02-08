@@ -1,7 +1,10 @@
+use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::time::Duration;
 
 use hyper::client::HttpConnector;
+use hyper::http::method::Method;
+use hyper::http::uri::Uri;
 use hyper::service::Service;
 use hyper_tls::HttpsConnector;
 use tower::limit::*;
@@ -11,6 +14,31 @@ use crate::error::{ClientError, Result};
 
 type HyperRequest = hyper::Request<hyper::Body>;
 type HyperClient = hyper::Client<HttpsConnector<HttpConnector>>;
+
+pub struct Request {
+    method: Method,
+    uri: String,
+}
+
+impl TryFrom<Request> for HyperRequest {
+    type Error = ClientError;
+
+    fn try_from(request: Request) -> Result<Self> {
+        let builder = hyper::Request::builder();
+
+        let Request { method, uri } = request;
+
+        let uri = Uri::try_from(uri)
+            .map_err(|err| ClientError::RequestConversionError(err.to_string()))?;
+        builder
+            .method(method)
+            .uri(uri)
+            .body(hyper::Body::empty())
+            .map_err(|err| ClientError::RequestConversionError(err.to_string()))
+    }
+}
+
+pub struct Response {}
 
 struct ClientRef<T>
 where
@@ -85,6 +113,19 @@ where
         let client = layer.layer(inner);
         Ok(Client::new(client))
     }
+
+    pub async fn request(&self, request: Request) -> Result<Response> {
+        let request: HyperRequest = request.try_into()?;
+        todo!()
+    }
+
+    // pub async fn request<R: TryInto<HyperRequest>>(&self, request: R) -> Result<Response> {
+    //     let request: HyperRequest = match request.try_into() {
+    //         Ok(request) => request,
+    //         Err(error) => match error.kind() {},
+    //     };
+    //     todo!()
+    // }
 }
 
 #[cfg(test)]
@@ -134,27 +175,16 @@ mod test {
         // Add concurrency limit
         let _con_rate_client = rate_client.add_concurrency_limit(1).unwrap();
     }
+
+    #[tokio::test]
+    async fn test_client_request() {
+        let client = Client::default();
+        client
+            .request(Request {
+                method: Method::GET,
+                uri: "https://httpbin.org/code/200".into(),
+            })
+            .await
+            .unwrap();
+    }
 }
-
-// fn make_service<T, S>() -> T
-// where
-//     T: Servicex<S>,
-// {
-//     let client = Client::new();
-//     let service = service_fn(move |request: Request| {
-//         let client = client.clone();
-
-//         async move {
-//             let response = client.execute(request).await;
-//             response
-//         }
-//     });
-//     let service = ServiceBuilder::new()
-//         .rate_limit(1, Duration::from_millis(10))
-//         // .rate_limit(1, Duration::from_micros(200))
-//         // .rate_limit(100, Duration::from_secs(1))
-//         // .rate_limit(10, Duration::from_secs(4))
-//         // .concurrency_limit(50)
-//         .service(service);
-//     service
-// }
