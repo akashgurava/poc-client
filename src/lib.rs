@@ -1,4 +1,5 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#[macro_use]
+extern crate serde;
 
-pub mod client;
-pub mod error;
+pub mod hac;
+pub mod reqw;
