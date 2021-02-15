@@ -1,5 +1,9 @@
 #[macro_use]
 extern crate serde;
 
-pub mod hac;
-pub mod reqw;
+pub mod client;
+pub mod error;
+
+pub mod routes {
+    pub mod quote;
+}
