@@ -1,17 +1,34 @@
-use std::time::{Duration, Instant};
-
-mod common;
+use std::collections::HashMap;
+use std::time::Instant;
 
 use futures::future::join_all;
-use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 
-use common::*;
 use poc_client::client::Client;
 
-use criterion::BenchmarkId;
-use criterion::Criterion;
-use criterion::{criterion_group, criterion_main};
+pub fn mean(numbers: &[u128]) -> f32 {
+    numbers.iter().sum::<u128>() as f32 / numbers.len() as f32
+}
+
+pub fn median(numbers: &mut [u128]) -> u128 {
+    numbers.sort();
+    let mid = numbers.len() / 2;
+    numbers[mid]
+}
+
+pub fn mode(numbers: &[u128]) -> u128 {
+    let mut occurrences = HashMap::new();
+
+    for &value in numbers {
+        *occurrences.entry(value).or_insert(0) += 1;
+    }
+
+    occurrences
+        .into_iter()
+        .max_by_key(|&(_, count)| count)
+        .map(|(val, _)| val)
+        .expect("Cannot compute the mode of zero numbers")
+}
 
 pub async fn parallel_quote_plain(request_count: usize) {
     let start = Instant::now();
@@ -67,30 +84,7 @@ pub async fn parallel_quote_plain(request_count: usize) {
     );
 }
 
-fn parallel_quote(c: &mut Criterion) {
-    let request_count = 100;
-
-    c.bench_with_input(
-        BenchmarkId::new("parallel_quote_plain", request_count),
-        &request_count,
-        |b, &request_count| {
-            let runner = Runtime::new().unwrap();
-            // Insert a call to `to_async` to convert the bencher to async mode.
-            // The timing loops are the same as with the normal bencher.
-            b.to_async(runner)
-                .iter(|| parallel_quote_plain(request_count));
-        },
-    );
+#[tokio::main]
+async fn main() {
+    parallel_quote_plain(500).await;
 }
-
-criterion_group! {
-    name = benches;
-    config = Criterion::default().sample_size(10).measurement_time(Duration::from_secs(30));
-    targets = parallel_quote
-}
-criterion_main!(benches);
-
-// #![feature(test)]
-
-// #[tokio::main]
-// async fn main() {}

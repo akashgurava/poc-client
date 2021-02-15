@@ -7,16 +7,16 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+futures = "*"
 http = "*"
 isahc = {version = "1", features = ["json"]}
 serde = {version = "1", features = ["derive"]}
 thiserror = "1"
+tokio = {version = "1", features = ["macros", "rt-multi-thread", "time", "sync"]}
 # tower = {version = "0.4", features = ["limit", "util"]}
 
 [dev-dependencies]
 criterion = {version = "0.3", features = ["async_tokio", "html_reports"]}
-futures = "*"
-tokio = {version = "1", features = ["macros", "rt-multi-thread", "time", "sync"]}
 # wiremock = "0.4"
 
 [[bench]]
